@@ -22,6 +22,12 @@
 @property(nonatomic, strong) NSUUID *proximityUUID;
 @property(nonatomic, strong) CLBeaconRegion *beaconRegion;
 
+@property (nonatomic, weak) IBOutlet UILabel *statusLabel;
+@property (nonatomic, weak) IBOutlet UILabel *proximityLabel;
+@property (nonatomic, weak) IBOutlet UILabel *rssiLabel;
+@property (nonatomic, weak) IBOutlet UILabel *accuracyLabel;
+
+
 @end
 
 @implementation ViewController
@@ -30,6 +36,8 @@
 {
     [super viewDidLoad];
 	// Do any additional setup after loading the view, typically from a nib.
+    
+    [self resetLabels];
     
     if ([CLLocationManager isMonitoringAvailableForClass:[CLBeaconRegion class]])
     {
@@ -73,11 +81,11 @@
 // 領域へ入ったら呼ばれる
 - (void)locationManager:(CLLocationManager *)manager didEnterRegion:(CLRegion *)region
 {
-    [self sendLocalNotificationForMessage:@"Enter Region"];
-    
     // Beaconの観測を開始する
     if([region isMemberOfClass:[CLBeaconRegion class]] && [CLLocationManager isRangingAvailable])
     {
+        self.statusLabel.text = @"Beacon in range:";
+        
         [self.locationManager startRangingBeaconsInRegion:(CLBeaconRegion*)region];
     }
     
@@ -87,8 +95,7 @@
 // 領域から出たら呼ばれる
 - (void)locationManager:(CLLocationManager *)manager didExitRegion:(CLRegion *)region
 {
-    // ローカル通知
-    [self sendLocalNotificationForMessage:@"Exit Region"];
+    [self resetLabels];
     
     // Beaconの観測を停止する
     if([region isMemberOfClass:[CLBeaconRegion class]] && [CLLocationManager isRangingAvailable])
@@ -112,56 +119,62 @@
         // 最も近いBeaconについて処理する
         CLBeacon *beacon = beacons.firstObject;
         
-        NSString *rangeMessage;
+        NSString *proximityStr;
         
         // Beaconの距離でメッセージを変える
         switch (beacon.proximity) {
             case CLProximityImmediate:
-                rangeMessage = @"Range Immediate: ";
+                proximityStr = @"Range Immediate: ";
                 break;
             case CLProximityNear:
-                rangeMessage = @"Range Near: ";
+                proximityStr = @"Range Near: ";
                 break;
             case CLProximityFar:
-                rangeMessage = @"Range Far: ";
+                proximityStr = @"Range Far: ";
                 break;
             default:
-                rangeMessage = @"Range Unknown: ";
+                proximityStr = @"Range Unknown: ";
                 break;
         }
         
-        NSLog(@"%@", rangeMessage);
+        self.proximityLabel.text = proximityStr;
+        self.rssiLabel.text = [NSString stringWithFormat:@"%ld [dB]", (long)beacon.rssi];
+        self.accuracyLabel.text = [NSString stringWithFormat:@"%.0f [m]", beacon.accuracy];
         
-        // ローカル通知
-        NSString *message = [NSString stringWithFormat:@"major:%@, minor:%@, accuracy:%f, rssi:%ld", beacon.major, beacon.minor, beacon.accuracy, (long)beacon.rssi];
-        
-        NSLog(@"%@", message);
-        
-        [self sendLocalNotificationForMessage:[rangeMessage stringByAppendingString:message]];
     }
 }
 
 -(void)locationManager:(CLLocationManager *)manager didDetermineState:(CLRegionState)state forRegion:(CLRegion *)region{
     
+    NSString *stateStr;
+    
     switch (state) {
         case CLRegionStateInside:
             if([region isMemberOfClass:[CLBeaconRegion class]] && [CLLocationManager isRangingAvailable]){
-                NSLog(@"Enter %@",region.identifier);
+                
                 //Beacon の範囲内に入った時に行う処理を記述する
                 //CLRegionStateInside が渡ってきていれば、すでになんらかのiBeaconのリージョン内にいるので、iOS7から追加された”CLLocationManager startRangingBeaconsInRegion:”を呼び、通知の受け取りを開始します。
                 [self.locationManager startRangingBeaconsInRegion:self.beaconRegion];
+                
+                stateStr = @"Enter Region";
+                NSLog(@"Enter %@",region.identifier);
             }
             break;
             
         case CLRegionStateOutside:
+            stateStr = @"Outside Region";
             NSLog(@"Outside %@",region.identifier);
             break;
         case CLRegionStateUnknown:
+            stateStr = @"Unknown Region";
             NSLog(@"Unknown %@",region.identifier);
             break;
         default:
+            stateStr = @"---";
             break;
     }
+    
+    self.statusLabel.text = stateStr;
 }
 
 // エラー系メソッド
@@ -193,6 +206,15 @@
     localNotification.fireDate = [NSDate date];
     localNotification.soundName = UILocalNotificationDefaultSoundName;
     [[UIApplication sharedApplication] scheduleLocalNotification:localNotification];
+}
+
+- (void)resetLabels {
+    
+    self.statusLabel.text = @"No Beacons";
+    
+    self.proximityLabel.text = nil;
+    self.rssiLabel.text = nil;
+    self.accuracyLabel.text = nil;
 }
 
 @end
