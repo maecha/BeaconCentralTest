@@ -114,6 +114,8 @@
 // locationManager:didEnterRegion:メソッドが正常に呼ばれたらこいつが呼ばれる
 - (void)locationManager:(CLLocationManager *)manager didRangeBeacons:(NSArray *)beacons inRegion:(CLBeaconRegion *)region
 {
+    //アプリを起動している間は1秒ごと呼び出される（バッググランド中は動かない）
+    
     if(beacons.count > 0)
     {
         // 最も近いBeaconについて処理する
@@ -124,16 +126,16 @@
         // Beaconの距離でメッセージを変える
         switch (beacon.proximity) {
             case CLProximityImmediate:
-                proximityStr = @"Range Immediate: ";
+                proximityStr = @"Range Immediate";
                 break;
             case CLProximityNear:
-                proximityStr = @"Range Near: ";
+                proximityStr = @"Range Near";
                 break;
             case CLProximityFar:
-                proximityStr = @"Range Far: ";
+                proximityStr = @"Range Far";
                 break;
             default:
-                proximityStr = @"Range Unknown: ";
+                proximityStr = @"Range Unknown";
                 break;
         }
         
@@ -145,6 +147,8 @@
 }
 
 -(void)locationManager:(CLLocationManager *)manager didDetermineState:(CLRegionState)state forRegion:(CLRegion *)region{
+    
+    NSLog(@"didDetermineState");
     
     NSString *stateStr;
     
